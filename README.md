@@ -80,6 +80,11 @@ below comes from the engine's repository.
 
 [<img src="docs/media/donation-tron.png" width="220" alt="GlyphForge TRON donation QR code">](https://tronscan.org/#/address/TZ6HTiRLeyWoFJ5rGgx6qbMyjLAHNb6hfb)
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, Conventional Commits, and
+English-only documentation rules.
+
 ## License
 
 Glyph Doom is licensed under GPL-2.0-or-later. See [COPYING](COPYING).
