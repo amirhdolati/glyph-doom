@@ -16,9 +16,10 @@ from pathlib import Path
 from tempfile import TemporaryFile
 
 ROOT = Path(__file__).resolve().parent
-GLYPHFORGE = ROOT.parent / "glyphforge-engine" / "src"
-if (GLYPHFORGE / "glyphforge").is_dir():
-    sys.path.insert(0, str(GLYPHFORGE))
+GLYPHFORGE = ROOT / "vendor" / "glyphforge-engine" / "src"
+if not (GLYPHFORGE / "glyphforge").is_dir():
+    sys.exit("GlyphForge is missing. Run git submodule update --init --recursive.")
+sys.path.insert(0, str(GLYPHFORGE))
 
 from glyphforge import Terminal, save_frame  # noqa: E402
 
