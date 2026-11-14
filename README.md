@@ -51,6 +51,10 @@ terminal's default foreground and background.
 python3 doom_glyph.py --ascii --warp 1 1
 ```
 
+![The start of DOOM E1M1 and its HUD rendered in white ASCII characters on black](docs/media/ascii-e1m1.svg)
+
+[View the same frame as plain text](docs/media/ascii-e1m1.txt).
+
 For the color renderer, pass `--256` to force the xterm 256-color palette. Terminals that only report
 keypresses use short key holds refreshed by keyboard repeat.
 
