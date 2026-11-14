@@ -44,8 +44,8 @@ For your own game data, use `./setup.sh --no-shareware` and
 | Q | Return to the shell |
 
 Use `--ascii` to play with plain ASCII. The whole frame, including the HUD,
-uses character density to represent brightness. Every character uses the
-terminal's default foreground and background.
+uses character density to represent brightness. GlyphForge converts the
+framebuffer to ASCII and draws it using the terminal's default colors.
 
 ```sh
 python3 doom_glyph.py --ascii --warp 1 1
@@ -54,6 +54,8 @@ python3 doom_glyph.py --ascii --warp 1 1
 ![The start of DOOM E1M1 and its HUD rendered in white ASCII characters on black](docs/media/ascii-e1m1.svg)
 
 [View the same frame as plain text](docs/media/ascii-e1m1.txt).
+
+![Glyph Doom gameplay in plain ASCII, showing movement and pistol fire in E1M1](docs/media/ascii-gameplay.gif)
 
 For the color renderer, pass `--256` to force the xterm 256-color palette. Terminals that only report
 keypresses use short key holds refreshed by keyboard repeat.

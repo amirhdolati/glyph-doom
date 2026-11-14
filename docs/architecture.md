@@ -16,8 +16,8 @@ flowchart TB
 
     subgraph PARENT["Python process · doom_glyph.py"]
         READ["read_frame · assemble a full frame"]
-        CELLS["to_cells · sample pixels and choose glyphs and colors"]
-        DRAW["GlyphForge · Terminal.draw"]
+        CELLS["to_cells · convert the framebuffer to character cells"]
+        DRAW["GlyphForge · Terminal.draw or Terminal.draw_ascii"]
         INPUT["GlyphForge · Terminal.events"]
         KEYS["Controls.read · encode changed key states"]
         SAVE["GlyphForge · save_frame"]
@@ -42,10 +42,10 @@ flowchart TB
 - **Frames.** DoomGeneric produces a 320×200 framebuffer with four bytes per
   pixel. Python reads a complete frame, averages four samples for each
   terminal cell, and picks a glyph from the resulting brightness. GlyphForge
-  updates changed cells in color mode. In `--ascii` mode, the frontend
-  writes full rows of glyphs using the terminal's default colors, while
-  GlyphForge still manages input and terminal setup. Both modes redraw
-  the screen after a resize.
+  updates changed cells in color mode. In `--ascii` mode, GlyphForge's
+  `raster_to_ascii` converts the RGB framebuffer to a monochrome character
+  grid, and `Terminal.draw_ascii` writes those glyphs using the terminal's
+  default colors. Both modes redraw the screen after a resize.
 - **Input.** Each interactive iteration reads terminal events before receiving
   its next frame. Python sends a Doom key code followed by `1` for press or
   `0` for release. The native adapter polls those records without blocking.

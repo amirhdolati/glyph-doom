@@ -21,19 +21,14 @@ if not (GLYPHFORGE / "glyphforge").is_dir():
     sys.exit("GlyphForge is missing. Run git submodule update --init --recursive.")
 sys.path.insert(0, str(GLYPHFORGE))
 
-from glyphforge import Terminal, save_frame  # noqa: E402
+from glyphforge import Terminal, raster_to_ascii, save_frame  # noqa: E402
+from glyphforge.ansi import encode_ascii  # noqa: E402
+from glyphforge.raster import sample_axis  # noqa: E402
 
 WIDTH, HEIGHT = 320, 200
 FRAME_SIZE = WIDTH * HEIGHT * 4
 DISPLAY_ASPECT = 4 / 3
 RAMP = " .:-=+*#%@"
-ASCII_RAMP = " .,:;-~=+*oO#%@"
-ASCII_GLYPHS = tuple(
-    ASCII_RAMP[round((level / 255) ** 0.65 * (len(ASCII_RAMP) - 1))]
-    for level in range(256)
-)
-ASCII_FOREGROUND = (255, 255, 255)
-ASCII_BACKGROUND = (0, 0, 0)
 DISPLAY_CHANNEL = tuple(round(255 * (channel / 255) ** 0.8) for channel in range(256))
 KEYS = {
     "up": 0xAD,
@@ -57,15 +52,10 @@ KEYS = {
 }
 
 
-def sample_axis(source, cells):
-    # Two sample centers in each cell, at 25% and 75% of its span.
-    return [
-        ((4 * i + 1) * source // (4 * cells), (4 * i + 3) * source // (4 * cells))
-        for i in range(cells)
-    ]
-
-
 def to_cells(pixels, width, height, *, ascii_mode=False):
+    if ascii_mode:
+        return raster_to_ascii(pixels, WIDTH, HEIGHT, columns=width, rows=height)
+
     xs = sample_axis(WIDTH, width)
     ys = sample_axis(HEIGHT, height)
     frame = []
@@ -82,10 +72,6 @@ def to_cells(pixels, width, height, *, ascii_mode=False):
             r = sum((pixel >> 16) & 255 for pixel in samples) // 4
             g = sum((pixel >> 8) & 255 for pixel in samples) // 4
             b = sum(pixel & 255 for pixel in samples) // 4
-            if ascii_mode:
-                luminance = (54 * r + 183 * g + 19 * b) >> 8
-                row.append((ASCII_GLYPHS[luminance], ASCII_FOREGROUND, ASCII_BACKGROUND))
-                continue
             r, g, b = DISPLAY_CHANNEL[r], DISPLAY_CHANNEL[g], DISPLAY_CHANNEL[b]
             luminance = (54 * r + 183 * g + 19 * b) >> 8
             glyph = RAMP[(luminance * (len(RAMP) - 1) + 127) // 255]
@@ -94,14 +80,6 @@ def to_cells(pixels, width, height, *, ascii_mode=False):
             row.append((glyph, fg, bg))
         frame.append(row)
     return frame
-
-
-def encode_ascii(frame, x=1, y=1):
-    """Position plain glyph rows using the terminal's default colors."""
-    return "".join(
-        f"\x1b[{y + offset};{x}H" + "".join(cell[0] for cell in row)
-        for offset, row in enumerate(frame)
-    )
 
 
 @contextmanager
@@ -222,8 +200,7 @@ def play(connection, terminal, pixels, *, ascii_mode=False):
             previous_layout = size
         frame = to_cells(pixels, width, height, ascii_mode=ascii_mode)
         if ascii_mode:
-            sys.stdout.write("\x1b[?2026h" + encode_ascii(frame, x, y) + "\x1b[?2026l")
-            sys.stdout.flush()
+            terminal.draw_ascii(frame, x=x, y=y)
         else:
             terminal.draw(frame, x=x, y=y, delta=True)
         displayed = True
