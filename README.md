@@ -45,23 +45,74 @@ For your own game data, use `./setup.sh --no-shareware` and
 Pass `--256` to force the xterm 256-color palette. Terminals that only report
 keypresses use short key holds refreshed by keyboard repeat.
 
-## How it works
+## Architecture
+
+`setup.sh` downloads and verifies the pinned DoomGeneric source. The Makefile
+links the DoomGeneric core with [`glyph_platform.c`](glyph_platform.c) to
+produce `.build/doom-pixels`. The [Python frontend](doom_glyph.py) loads
+GlyphForge from the pinned submodule and starts the executable with the chosen IWAD.
 
 ```mermaid
-flowchart LR
-    WAD["DOOM IWAD"] --> Doom["DoomGeneric<br/>Game logic and renderer"]
-    Doom -->|"320×200 RGB frame over local socket"| Python["Glyph Doom<br/>Pixels to ASCII cells"]
-    Python -->|"Glyphs and RGB colors"| Glyph["GlyphForge"]
-    Glyph -->|"ANSI draw commands"| Terminal["Terminal"]
-    Terminal -->|"Keyboard input"| Glyph
-    Glyph -->|"Key events"| Python
-    Python -->|"Press and release over local socket"| Doom
+flowchart TB
+    WAD["IWAD<br/>Maps, textures, sprites, and other game data"]
+    TTY["ANSI terminal"]
+    FILE["SVG, HTML, TXT, or ANSI file"]
+
+    subgraph C["Native child process · .build/doom-pixels"]
+        DOOM["DoomGeneric<br/>Game ticks and original software renderer"]
+        DRAW["glyph_platform.c<br/>DG_DrawFrame"]
+        KEY["glyph_platform.c<br/>DG_GetKey"]
+        KEY -->|"Key code and press or release"| DOOM
+        DOOM -->|"DG_ScreenBuffer"| DRAW
+    end
+
+    subgraph SOCK["Local socket pair · socket.socketpair()"]
+        FRAMES["Native → Python<br/>Fixed-size frame stream"]
+        KEYS["Python → Native<br/>Two-byte key records"]
+    end
+
+    subgraph PY["Python parent process · doom_glyph.py"]
+        LAUNCH["doom_process<br/>Start child with the IWAD path and socket descriptor"]
+        READ["read_frame<br/>Read one complete 320×200 frame"]
+        CELLS["to_cells<br/>Sample four pixels per cell and choose a glyph and colors"]
+        MAP["Controls.read<br/>Map events to Doom key codes"]
+        EVENTS["GlyphForge · Terminal.events"]
+        DISPLAY["GlyphForge · Terminal.draw"]
+        SAVE["GlyphForge · save_frame"]
+        READ --> CELLS
+        CELLS -->|"Interactive play"| DISPLAY
+        CELLS -->|"Screenshot mode"| SAVE
+        EVENTS --> MAP
+    end
+
+    LAUNCH -.->|"Start with Popen"| DOOM
+    WAD --> DOOM
+    DRAW -->|"256,000 bytes per frame"| FRAMES
+    FRAMES --> READ
+    DISPLAY -->|"ANSI screen updates"| TTY
+    TTY -->|"Keyboard bytes"| EVENTS
+    MAP -->|"Key code, then 1 for press or 0 for release"| KEYS
+    KEYS --> KEY
+    SAVE --> FILE
 ```
 
-`doom_glyph.py` launches the native executable and converts its frames to
-GlyphForge cells. `glyph_platform.c` bridges DoomGeneric's display, timer, and
-keyboard callbacks to the local process. The build goes in `.build/` and the
-pinned display library lives in `vendor/glyphforge-engine/`.
+1. **Start the game.** `doom_process()` creates the socket pair and gives
+   DoomGeneric one endpoint through the inherited descriptor named by
+   `DOOM_GLYPH_FD`. The C adapter calls `doomgeneric_Create()`, then repeatedly
+   calls `doomgeneric_Tick()` to advance and render the game.
+2. **Render to terminal cells.** `DG_DrawFrame()` sends the framebuffer as
+   320×200 native 32-bit pixel values, with at least 28 ms between sends.
+   Python assembles the full frame from the byte stream, averages four samples
+   per cell, and uses luminance to select the ASCII glyph. GlyphForge writes
+   ANSI updates for changed cells and redraws after a resize.
+3. **Return keyboard input.** Each interactive iteration reads key events from
+   GlyphForge before receiving the next frame. `Controls.read()` encodes each
+   changed Doom key state as two bytes, which Python writes to the same socket. `DG_GetKey()`
+   polls for those records without blocking the game tick.
+4. **Export or exit.** Screenshot mode reads frames for roughly 1.5 seconds
+   and exports one 120×45 cell frame without opening an interactive terminal.
+   During play, `Q` exits the loop, GlyphForge restores the terminal, and
+   Python closes the socket and reaps the child process.
 
 ## Export a screenshot
 
