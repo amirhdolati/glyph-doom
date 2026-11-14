@@ -46,72 +46,21 @@ keypresses use short key holds refreshed by keyboard repeat.
 
 ## Architecture
 
-`setup.sh` downloads and verifies the pinned DoomGeneric source. The Makefile
-links the DoomGeneric core with [`glyph_platform.c`](glyph_platform.c) to
-produce `.build/doom-pixels`. The [Python frontend](doom_glyph.py) loads
-GlyphForge from the pinned submodule and starts the executable with the chosen IWAD.
-
 ```mermaid
-flowchart TB
-    WAD["IWAD<br/>Maps, textures, sprites, and other game data"]
-    TTY["ANSI terminal"]
-    FILE["SVG, HTML, TXT, or ANSI file"]
-
-    subgraph C["Native child process · .build/doom-pixels"]
-        DOOM["DoomGeneric<br/>Game ticks and original software renderer"]
-        DRAW["glyph_platform.c<br/>DG_DrawFrame"]
-        KEY["glyph_platform.c<br/>DG_GetKey"]
-        KEY -->|"Key code and press or release"| DOOM
-        DOOM -->|"DG_ScreenBuffer"| DRAW
-    end
-
-    subgraph SOCK["Local socket pair · socket.socketpair()"]
-        FRAMES["Native → Python<br/>Fixed-size frame stream"]
-        KEYS["Python → Native<br/>Two-byte key records"]
-    end
-
-    subgraph PY["Python parent process · doom_glyph.py"]
-        LAUNCH["doom_process<br/>Start child with the IWAD path and socket descriptor"]
-        READ["read_frame<br/>Read one complete 320×200 frame"]
-        CELLS["to_cells<br/>Sample four pixels per cell and choose a glyph and colors"]
-        MAP["Controls.read<br/>Map events to Doom key codes"]
-        EVENTS["GlyphForge · Terminal.events"]
-        DISPLAY["GlyphForge · Terminal.draw"]
-        SAVE["GlyphForge · save_frame"]
-        READ --> CELLS
-        CELLS -->|"Interactive play"| DISPLAY
-        CELLS -->|"Screenshot mode"| SAVE
-        EVENTS --> MAP
-    end
-
-    LAUNCH -.->|"Start with Popen"| DOOM
-    WAD --> DOOM
-    DRAW -->|"256,000 bytes per frame"| FRAMES
-    FRAMES --> READ
-    DISPLAY -->|"ANSI screen updates"| TTY
-    TTY -->|"Keyboard bytes"| EVENTS
-    MAP -->|"Key code, then 1 for press or 0 for release"| KEYS
-    KEYS --> KEY
-    SAVE --> FILE
+flowchart LR
+    WAD["DOOM IWAD"] --> DOOM["DoomGeneric"]
+    DOOM -->|"Game frames"| APP["Glyph Doom"]
+    APP -->|"Colored ASCII cells"| GLYPH["GlyphForge"]
+    GLYPH -->|"Screen updates"| TTY["Terminal"]
+    TTY -.->|"Keyboard input"| GLYPH
+    GLYPH -.->|"Key events"| APP
+    APP -.->|"Doom key states"| DOOM
 ```
 
-1. **Start the game.** `doom_process()` creates the socket pair and gives
-   DoomGeneric one endpoint through the inherited descriptor named by
-   `DOOM_GLYPH_FD`. The C adapter calls `doomgeneric_Create()`, then repeatedly
-   calls `doomgeneric_Tick()` to advance and render the game.
-2. **Render to terminal cells.** `DG_DrawFrame()` sends the framebuffer as
-   320×200 native 32-bit pixel values, with at least 28 ms between sends.
-   Python assembles the full frame from the byte stream, averages four samples
-   per cell, and uses luminance to select the ASCII glyph. GlyphForge writes
-   ANSI updates for changed cells and redraws after a resize.
-3. **Return keyboard input.** Each interactive iteration reads key events from
-   GlyphForge before receiving the next frame. `Controls.read()` encodes each
-   changed Doom key state as two bytes, which Python writes to the same socket. `DG_GetKey()`
-   polls for those records without blocking the game tick.
-4. **Export or exit.** Screenshot mode reads frames for roughly 1.5 seconds
-   and exports one 120×45 cell frame without opening an interactive terminal.
-   During play, `Q` exits the loop, GlyphForge restores the terminal, and
-   Python closes the socket and reaps the child process.
+DoomGeneric runs and renders the game. Glyph Doom converts each frame into
+colored ASCII cells, and GlyphForge displays them in the terminal.
+
+[Runtime details and data flow](docs/architecture.md)
 
 ## Export a screenshot
 
