@@ -7,7 +7,7 @@ Open an issue for a bug or feature proposal. Include your OS, terminal, Python v
 Requires Python 3.10+, Git, a C compiler, Make, curl, and an ANSI terminal.
 
 ```sh
-git clone --recurse-submodules git@github.com:amirhdolati/glyph-doom.git
+git clone --recurse-submodules https://github.com/amirhdolati/glyph-doom.git
 cd glyph-doom
 ./setup.sh
 python3 doom_glyph.py --warp 1 1

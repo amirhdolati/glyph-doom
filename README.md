@@ -1,5 +1,7 @@
 # Glyph Doom
 
+[![CI](https://github.com/amirhdolati/glyph-doom/actions/workflows/ci.yml/badge.svg)](https://github.com/amirhdolati/glyph-doom/actions/workflows/ci.yml)
+
 Play the original DOOM in a terminal with colored ASCII graphics. DoomGeneric
 runs the game and renders its 320×200 framebuffer. GlyphForge draws the resulting
 character grid, reads keyboard events, and exports still frames.
@@ -16,7 +18,7 @@ near the starting area for the demo.
 Requires Python 3.10+, Git, a C compiler, Make, curl, and an ANSI terminal.
 
 ```sh
-git clone --recurse-submodules git@github.com:amirhdolati/glyph-doom.git
+git clone --recurse-submodules https://github.com/amirhdolati/glyph-doom.git
 cd glyph-doom
 ./setup.sh
 python3 doom_glyph.py --warp 1 1
@@ -62,16 +64,23 @@ colored ASCII cells, and GlyphForge displays them in the terminal.
 
 [Runtime details and data flow](docs/architecture.md)
 
-## Export a screenshot
+## Development
 
 ```sh
+./setup.sh
+python3 -m compileall -q doom_glyph.py
 python3 doom_glyph.py --warp 1 1 --screenshot e1m1.svg
 ```
 
 The exporter also supports `.html`, `.ans`, and `.txt`. For a DOOM II IWAD,
 pass one map number to `--warp`.
 
-## Support GlyphForge
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, Conventional Commits, and
+English-only documentation rules.
+
+## Support
 
 You can support GlyphForge development with a donation on TRON. The QR code
 below comes from the engine's repository.
@@ -79,11 +88,6 @@ below comes from the engine's repository.
 [View the GlyphForge donation address on TRONSCAN](https://tronscan.org/#/address/TZ6HTiRLeyWoFJ5rGgx6qbMyjLAHNb6hfb)
 
 [<img src="docs/media/donation-tron.png" width="220" alt="GlyphForge TRON donation QR code">](https://tronscan.org/#/address/TZ6HTiRLeyWoFJ5rGgx6qbMyjLAHNb6hfb)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, Conventional Commits, and
-English-only documentation rules.
 
 ## License
 
