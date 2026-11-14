@@ -13,20 +13,14 @@ near the starting area for the demo.
 
 ## Quick start
 
-You need Python 3.10+, Git, a C compiler, Make, curl, and an ANSI terminal.
-On macOS, install the Xcode Command Line Tools if you need a compiler.
+Requires Python 3.10+, Git, a C compiler, Make, curl, and an ANSI terminal.
 
 ```sh
-git -c url.https://github.com/.insteadOf=git@github.com: clone --recurse-submodules https://github.com/amirhdolati/glyph-doom.git
+git clone --recurse-submodules git@github.com:amirhdolati/glyph-doom.git
 cd glyph-doom
 ./setup.sh
 python3 doom_glyph.py --warp 1 1
 ```
-
-The clone command uses HTTPS for public downloads. The GlyphForge submodule
-records its SSH URL, so contributors with GitHub SSH access can also clone
-`git@github.com:amirhdolati/glyph-doom.git` with `--recurse-submodules`.
-The submodule pins the engine version and provides the Python package directly.
 
 Setup builds [DoomGeneric](https://github.com/ozkl/doomgeneric) from a pinned
 revision and downloads the [DOOM 1.8 shareware IWAD](https://www.gamers.org/pub/idgames/idstuff/doom/).
