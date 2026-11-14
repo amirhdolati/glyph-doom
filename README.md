@@ -4,7 +4,12 @@ Play the original DOOM in a terminal with colored ASCII graphics. DoomGeneric
 runs the game and renders its 320×200 framebuffer. GlyphForge draws the resulting
 character grid, reads keyboard events, and exports still frames.
 
-![Glyph Doom gameplay in E1M1](docs/media/gameplay.gif)
+![DOOM title screen rendered as colored ASCII](docs/media/title-screen.png)
+
+![Glyph Doom combat demo showing a pistol fight followed by a barrel explosion](docs/media/gameplay.gif)
+
+Recorded with Glyph Doom in E1M1 with a former human and a barrel positioned
+near the starting area for the demo.
 
 ## Quick start
 
@@ -122,8 +127,6 @@ python3 doom_glyph.py --warp 1 1 --screenshot e1m1.svg
 
 The exporter also supports `.html`, `.ans`, and `.txt`. For a DOOM II IWAD,
 pass one map number to `--warp`.
-
-![E1M1 rendered as colored ASCII](docs/media/e1m1.png)
 
 ## Support GlyphForge
 
