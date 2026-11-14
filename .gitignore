@@ -1,0 +1,9 @@
+.build/
+.state/
+.venv/
+.ruff_cache/
+__pycache__/
+/assets/
+/e1m1.svg
+/e1m1.png
+/e1m1-mesh.svg
