@@ -147,10 +147,10 @@ class Controls:
         )
 
 
-def layout(terminal, aspect):
+def layout(terminal, aspect, *, ascii_mode=False):
     columns, lines = terminal.size()
-    width = min(max(1, columns), 160)
-    height = min(max(1, lines), 80)
+    width = min(max(1, columns), 320 if ascii_mode else 160)
+    height = min(max(1, lines), 200 if ascii_mode else 80)
     width = max(1, min(width, round(height * DISPLAY_ASPECT / aspect)))
     height = max(1, min(height, round(width * aspect / DISPLAY_ASPECT)))
     return (
@@ -189,7 +189,7 @@ def play(connection, terminal, pixels, *, ascii_mode=False):
                     return True
                 raise
         aspect = terminal.aspect()
-        size = layout(terminal, aspect)
+        size = layout(terminal, aspect, ascii_mode=ascii_mode)
         width, height, x, y = size
         if not read_frame(connection, pixels):
             if not displayed:
@@ -210,7 +210,8 @@ def capture(connection, pixels, path, *, ascii_mode=False):
     until = time.monotonic() + 1.5
     while read_frame(connection, pixels):
         if time.monotonic() >= until:
-            frame = to_cells(pixels, 120, 45, ascii_mode=ascii_mode)
+            width, height = (200, 75) if ascii_mode else (120, 45)
+            frame = to_cells(pixels, width, height, ascii_mode=ascii_mode)
             if ascii_mode and path.suffix.lower() == ".ans":
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(encode_ascii(frame), encoding="ascii")

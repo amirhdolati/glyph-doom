@@ -45,7 +45,9 @@ For your own game data, use `./setup.sh --no-shareware` and
 
 Use `--ascii` to play with plain ASCII. The whole frame, including the HUD,
 uses character density to represent brightness. GlyphForge converts the
-framebuffer to ASCII and draws it using the terminal's default colors.
+framebuffer to ASCII and draws it using the terminal's default colors. A 64-character shading ramp and directional
+edge characters preserve texture and contours. Smaller terminal fonts allow
+more detail, up to 320 columns. ASCII screenshots use 200×75 cells.
 
 ```sh
 python3 doom_glyph.py --ascii --warp 1 1

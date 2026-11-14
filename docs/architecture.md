@@ -49,6 +49,6 @@ flowchart TB
 - **Input.** Each interactive iteration reads terminal events before receiving
   its next frame. Python sends a Doom key code followed by `1` for press or
   `0` for release. The native adapter polls those records without blocking.
-- **Capture and exit.** Screenshot mode exports a 120×45 cell frame without
+- **Capture and exit.** Screenshot mode exports a 200×75 ASCII frame or a 120×45 color frame without
   opening an interactive terminal. During play, `Q` closes the session and
   GlyphForge restores the terminal.
