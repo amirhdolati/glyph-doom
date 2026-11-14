@@ -1,59 +1,90 @@
 # Glyph Doom
 
-Play the original DOOM in an ANSI terminal. DoomGeneric renders the game into a
-320×200 pixel framebuffer. The Python frontend samples it into colored ASCII
-cells, and GlyphForge handles terminal drawing, input, and frame export.
+Play the original DOOM in a terminal with colored ASCII graphics. DoomGeneric
+runs the game and renders its 320×200 framebuffer. GlyphForge draws the resulting
+character grid, reads keyboard events, and exports still frames.
 
-## Run
+![Glyph Doom gameplay in E1M1](docs/media/gameplay.gif)
 
-Use macOS, Linux, or WSL with Python 3.10+, a C compiler, Make, and curl. The project
-loads [GlyphForge](https://github.com/amirhdolati/glyphforge-engine) from an adjacent
-`glyphforge-engine/src` checkout when present. A standalone clone can install it
-in a virtual environment:
+## Quick start
+
+You need Python 3.10+, Git, a C compiler, Make, curl, and an ANSI terminal.
+On macOS, install the Xcode Command Line Tools if you need a compiler.
 
 ```sh
-git clone https://github.com/amirhdolati/glyph-doom.git
+git -c url.https://github.com/.insteadOf=git@github.com: clone --recurse-submodules https://github.com/amirhdolati/glyph-doom.git
 cd glyph-doom
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install "git+https://github.com/amirhdolati/glyphforge-engine.git"
 ./setup.sh
-python doom_glyph.py --warp 1 1
+python3 doom_glyph.py --warp 1 1
 ```
 
-Setup builds the pinned [DoomGeneric source](https://github.com/ozkl/doomgeneric/tree/e257a09527062bfb986b6e5e0780839b6cbd5b71)
-and downloads the original [DOOM 1.8 shareware episode](https://www.gamers.org/pub/idgames/idstuff/doom/).
-Use `./setup.sh --no-shareware` and `python3 doom_glyph.py --iwad /path/to/doom.wad`
-to use your own IWAD. Each IWAD gets its own local save/config directory in `.state/`.
+The clone command uses HTTPS for public downloads. The GlyphForge submodule
+records its SSH URL, so contributors with GitHub SSH access can also clone
+`git@github.com:amirhdolati/glyph-doom.git` with `--recurse-submodules`.
+The submodule pins the engine version and provides the Python package directly.
 
-| Keys | Action |
+Setup builds [DoomGeneric](https://github.com/ozkl/doomgeneric) from a pinned
+revision and downloads the [DOOM 1.8 shareware IWAD](https://www.gamers.org/pub/idgames/idstuff/doom/).
+For your own game data, use `./setup.sh --no-shareware` and
+`python3 doom_glyph.py --iwad /path/to/doom.wad`. Saves and settings live in
+`.state/`. The game runs silently and uses keyboard controls.
+
+| Key | Action |
 | --- | --- |
-| Up / Down or W / S | Move forward / backward |
-| Left / Right | Turn |
+| ↑ / ↓ or W / S | Move forward or backward |
+| ← / → | Turn |
 | A / D | Strafe |
 | Space or F | Fire |
-| E | Use / open |
+| E | Use or open |
 | Shift | Run in terminals that report modifier-key events |
 | 1–7 | Select weapon |
 | Tab | Automap |
-| Esc / Enter | Menu / select |
-| Q | Exit to the shell |
+| Esc / Enter | Open menu / select |
+| Q | Return to the shell |
 
-For held keys, the frontend uses press and release events when the terminal provides
-them and short pulses refreshed by keyboard repeat otherwise. This port uses keyboard
-controls and runs silently. Color is detected by GlyphForge. Pass `--256` to force
-the xterm palette.
+Pass `--256` to force the xterm 256-color palette. Terminals that only report
+keypresses use short key holds refreshed by keyboard repeat.
 
-## Start a level or export a frame
+## How it works
+
+```mermaid
+flowchart LR
+    WAD["DOOM IWAD"] --> Doom["DoomGeneric<br/>Game logic and renderer"]
+    Doom -->|"320×200 RGB frame over local socket"| Python["Glyph Doom<br/>Pixels to ASCII cells"]
+    Python -->|"Glyphs and RGB colors"| Glyph["GlyphForge"]
+    Glyph -->|"ANSI draw commands"| Terminal["Terminal"]
+    Terminal -->|"Keyboard input"| Glyph
+    Glyph -->|"Key events"| Python
+    Python -->|"Press and release over local socket"| Doom
+```
+
+`doom_glyph.py` launches the native executable and converts its frames to
+GlyphForge cells. `glyph_platform.c` bridges DoomGeneric's display, timer, and
+keyboard callbacks to the local process. The build goes in `.build/` and the
+pinned display library lives in `vendor/glyphforge-engine/`.
+
+## Export a screenshot
 
 ```sh
-python3 doom_glyph.py --warp 1 1
 python3 doom_glyph.py --warp 1 1 --screenshot e1m1.svg
 ```
 
-The screenshot command also accepts `.html`, `.ans`, and `.txt`. Use one map
-number with `--warp` for DOOM II.
+The exporter also supports `.html`, `.ans`, and `.txt`. For a DOOM II IWAD,
+pass one map number to `--warp`.
 
-Glyph Doom is licensed under GPL-2.0-or-later. See [COPYING](COPYING) for the
-GPL text. Game data is downloaded separately, and GlyphForge is an independent
-MIT-licensed dependency.
+![E1M1 rendered as colored ASCII](docs/media/e1m1.png)
+
+## Support GlyphForge
+
+You can support GlyphForge development with a donation on TRON. The QR code
+below comes from the engine's repository.
+
+[View the GlyphForge donation address on TRONSCAN](https://tronscan.org/#/address/TZ6HTiRLeyWoFJ5rGgx6qbMyjLAHNb6hfb)
+
+[<img src="docs/media/donation-tron.png" width="220" alt="GlyphForge TRON donation QR code">](https://tronscan.org/#/address/TZ6HTiRLeyWoFJ5rGgx6qbMyjLAHNb6hfb)
+
+## License
+
+Glyph Doom is licensed under GPL-2.0-or-later. See [COPYING](COPYING).
+[GlyphForge](https://github.com/amirhdolati/glyphforge-engine) is an independent
+MIT-licensed dependency. DOOM game data is supplied separately.
