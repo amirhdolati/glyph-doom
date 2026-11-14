@@ -27,6 +27,13 @@ WIDTH, HEIGHT = 320, 200
 FRAME_SIZE = WIDTH * HEIGHT * 4
 DISPLAY_ASPECT = 4 / 3
 RAMP = " .:-=+*#%@"
+ASCII_RAMP = " .,:;-~=+*oO#%@"
+ASCII_GLYPHS = tuple(
+    ASCII_RAMP[round((level / 255) ** 0.65 * (len(ASCII_RAMP) - 1))]
+    for level in range(256)
+)
+ASCII_FOREGROUND = (255, 255, 255)
+ASCII_BACKGROUND = (0, 0, 0)
 DISPLAY_CHANNEL = tuple(round(255 * (channel / 255) ** 0.8) for channel in range(256))
 KEYS = {
     "up": 0xAD,
@@ -58,7 +65,7 @@ def sample_axis(source, cells):
     ]
 
 
-def to_cells(pixels, width, height):
+def to_cells(pixels, width, height, *, ascii_mode=False):
     xs = sample_axis(WIDTH, width)
     ys = sample_axis(HEIGHT, height)
     frame = []
@@ -75,6 +82,10 @@ def to_cells(pixels, width, height):
             r = sum((pixel >> 16) & 255 for pixel in samples) // 4
             g = sum((pixel >> 8) & 255 for pixel in samples) // 4
             b = sum(pixel & 255 for pixel in samples) // 4
+            if ascii_mode:
+                luminance = (54 * r + 183 * g + 19 * b) >> 8
+                row.append((ASCII_GLYPHS[luminance], ASCII_FOREGROUND, ASCII_BACKGROUND))
+                continue
             r, g, b = DISPLAY_CHANNEL[r], DISPLAY_CHANNEL[g], DISPLAY_CHANNEL[b]
             luminance = (54 * r + 183 * g + 19 * b) >> 8
             glyph = RAMP[(luminance * (len(RAMP) - 1) + 127) // 255]
@@ -83,6 +94,14 @@ def to_cells(pixels, width, height):
             row.append((glyph, fg, bg))
         frame.append(row)
     return frame
+
+
+def encode_ascii(frame, x=1, y=1):
+    """Position plain glyph rows using the terminal's default colors."""
+    return "".join(
+        f"\x1b[{y + offset};{x}H" + "".join(cell[0] for cell in row)
+        for offset, row in enumerate(frame)
+    )
 
 
 @contextmanager
@@ -176,7 +195,7 @@ def read_frame(connection, pixels):
     return True
 
 
-def play(connection, terminal, pixels):
+def play(connection, terminal, pixels, *, ascii_mode=False):
     previous_layout = None
     controls = Controls()
     displayed = False
@@ -201,15 +220,25 @@ def play(connection, terminal, pixels):
         if size != previous_layout:
             terminal.clear()
             previous_layout = size
-        terminal.draw(to_cells(pixels, width, height), x=x, y=y, delta=True)
+        frame = to_cells(pixels, width, height, ascii_mode=ascii_mode)
+        if ascii_mode:
+            sys.stdout.write("\x1b[?2026h" + encode_ascii(frame, x, y) + "\x1b[?2026l")
+            sys.stdout.flush()
+        else:
+            terminal.draw(frame, x=x, y=y, delta=True)
         displayed = True
 
 
-def capture(connection, pixels, path):
+def capture(connection, pixels, path, *, ascii_mode=False):
     until = time.monotonic() + 1.5
     while read_frame(connection, pixels):
         if time.monotonic() >= until:
-            return save_frame(to_cells(pixels, 120, 45), path)
+            frame = to_cells(pixels, 120, 45, ascii_mode=ascii_mode)
+            if ascii_mode and path.suffix.lower() == ".ans":
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(encode_ascii(frame), encoding="ascii")
+                return path
+            return save_frame(frame, path)
     raise RuntimeError("DoomGeneric stopped before the screenshot was ready.")
 
 
@@ -225,8 +254,15 @@ def main():
         metavar="FILE",
         help="export one .svg, .html, .ans or .txt frame",
     )
-    parser.add_argument(
+    display = parser.add_mutually_exclusive_group()
+    display.add_argument(
         "--256", dest="palette256", action="store_true", help="force xterm-256 colors"
+    )
+    display.add_argument(
+        "--ascii",
+        dest="ascii_mode",
+        action="store_true",
+        help="render the full frame with ASCII characters and no color changes",
     )
     args = parser.parse_args()
     if args.warp and (len(args.warp) > 2 or not all(n.isdecimal() for n in args.warp)):
@@ -244,12 +280,18 @@ def main():
         try:
             with doom_process(args, log) as (connection, process):
                 if args.screenshot:
-                    print(capture(connection, pixels, args.screenshot))
+                    print(
+                        capture(
+                            connection, pixels, args.screenshot, ascii_mode=args.ascii_mode
+                        )
+                    )
                 else:
                     with Terminal(
                         truecolor=False if args.palette256 else None
                     ) as terminal:
-                        backend_closed = play(connection, terminal, pixels)
+                        backend_closed = play(
+                            connection, terminal, pixels, ascii_mode=args.ascii_mode
+                        )
                     if backend_closed and process.wait(timeout=1):
                         raise RuntimeError(
                             f"DoomGeneric exited with status {process.returncode}."

@@ -43,7 +43,15 @@ For your own game data, use `./setup.sh --no-shareware` and
 | Esc / Enter | Open menu / select |
 | Q | Return to the shell |
 
-Pass `--256` to force the xterm 256-color palette. Terminals that only report
+Use `--ascii` to play with plain ASCII. The whole frame, including the HUD,
+uses character density to represent brightness. Every character uses the
+terminal's default foreground and background.
+
+```sh
+python3 doom_glyph.py --ascii --warp 1 1
+```
+
+For the color renderer, pass `--256` to force the xterm 256-color palette. Terminals that only report
 keypresses use short key holds refreshed by keyboard repeat.
 
 ## Architecture
@@ -74,6 +82,8 @@ python3 doom_glyph.py --warp 1 1 --screenshot e1m1.svg
 
 The exporter also supports `.html`, `.ans`, and `.txt`. For a DOOM II IWAD,
 pass one map number to `--warp`.
+
+Use `--ascii --screenshot e1m1.txt` to save the plain character grid.
 
 ## Contributing
 
